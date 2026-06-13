@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Web Photobooth</title>
+    <!-- Google Fonts for modern typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="app">
+      <header class="glass-header">
+        <h1>VibeBooth</h1>
+        <p>Capture your moment</p>
+      </header>
+
+      <main>
+        <!-- Setup View -->
+        <section id="setup-view" class="view active">
+          <div class="glass-card">
+            <h2>Configuration</h2>
+            <div class="control-group">
+              <label for="photo-count">Number of Photos</label>
+              <select id="photo-count">
+                <option value="2">2 Photos</option>
+                <option value="3">3 Photos</option>
+                <option value="4" selected>4 Photos</option>
+                <option value="6">6 Photos</option>
+              </select>
+            </div>
+            <div class="control-group">
+              <label for="frame-theme">Frame Theme & Elements</label>
+              <select id="frame-theme">
+                <option value="minimalist" selected>Minimalist (Color Only)</option>
+                <option value="cyberpunk">Cyberpunk Neon</option>
+                <option value="cute-animals">Cute Animals</option>
+                <option value="floral">Vintage Floral</option>
+                <option value="party">Party Vibes</option>
+              </select>
+            </div>
+            <div class="control-group">
+              <label for="frame-color">Frame Base Color</label>
+              <input type="color" id="frame-color" value="#ffffff" />
+            </div>
+            <button id="start-btn" class="primary-btn">Start Booth</button>
+          </div>
+        </section>
+
+        <!-- Camera View -->
+        <section id="camera-view" class="view">
+          <div class="camera-container glass-card">
+            <video id="video" autoplay playsinline></video>
+            <div id="countdown" class="countdown hidden">3</div>
+            <div id="flash" class="flash hidden"></div>
+          </div>
+          <div class="status-bar">
+            <span id="photo-progress">0 / 4</span>
+          </div>
+          <button id="capture-btn" class="primary-btn hidden">Ready?</button>
+        </section>
+
+        <!-- Preview View -->
+        <section id="preview-view" class="view">
+          <div class="preview-container glass-card">
+            <canvas id="output-canvas"></canvas>
+            <div class="actions">
+              <button id="download-btn" class="primary-btn">Download Strip</button>
+              <button id="drive-btn" class="primary-btn" style="background: linear-gradient(135deg, #4285F4, #34A853); box-shadow: 0 4px 15px rgba(66, 133, 244, 0.4);">Save to Drive</button>
+              <button id="retake-btn" class="secondary-btn">Retake</button>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+    <!-- Google Identity Services for Drive Upload -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
