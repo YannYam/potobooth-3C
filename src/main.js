@@ -31,7 +31,7 @@ const previewEls = {
 
 // Google Drive Config
 // NOTE: To make this fully functional, replace this with a valid Client ID from Google Cloud Console
-const GOOGLE_CLIENT_ID = 'YOUR_CLIENT_ID_HERE.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = '117288252249205185149.apps.googleusercontent.com';
 let tokenClient;
 
 window.onload = () => {
@@ -100,7 +100,7 @@ function drawThemeBackground(ctx, width, height, theme, baseColor) {
 function drawThemeOverlay(ctx, width, height, theme) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  
+
   if (theme === 'cyberpunk') {
     ctx.font = '60px Arial';
     ctx.fillText('👾', width - 60, 60);
@@ -129,17 +129,17 @@ function drawThemeOverlay(ctx, width, height, theme) {
 
 async function startCamera() {
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ 
-      video: { 
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
         width: { ideal: 1280 },
         height: { ideal: 960 },
-        facingMode: "user" 
-      } 
+        facingMode: "user"
+      }
     });
     state.stream = stream;
     cameraEls.video.srcObject = stream;
     switchView('camera');
-    
+
     // Slight delay to ensure video is ready
     setTimeout(() => {
       cameraEls.captureBtn.classList.remove('hidden');
@@ -171,7 +171,7 @@ async function startCaptureSequence() {
   for (let i = 0; i < state.config.photoCount; i++) {
     await takePhotoWithCountdown();
   }
-  
+
   generatePreview();
 }
 
@@ -188,11 +188,11 @@ function takePhotoWithCountdown() {
       } else {
         clearInterval(interval);
         cameraEls.countdown.classList.add('hidden');
-        
+
         // Flash effect
         cameraEls.flash.classList.remove('hidden');
         cameraEls.flash.classList.add('active');
-        
+
         setTimeout(() => {
           cameraEls.flash.classList.remove('active');
           cameraEls.flash.classList.add('hidden');
@@ -201,7 +201,7 @@ function takePhotoWithCountdown() {
         captureFrame();
         state.currentPhoto++;
         updateProgress();
-        
+
         // Wait a bit before next countdown
         setTimeout(resolve, 1000);
       }
@@ -214,54 +214,54 @@ function captureFrame() {
   canvas.width = cameraEls.video.videoWidth;
   canvas.height = cameraEls.video.videoHeight;
   const ctx = canvas.getContext('2d');
-  
+
   // Mirror the image to match video
   ctx.translate(canvas.width, 0);
   ctx.scale(-1, 1);
   ctx.drawImage(cameraEls.video, 0, 0, canvas.width, canvas.height);
-  
+
   state.capturedPhotos.push(canvas.toDataURL('image/png'));
 }
 
 function generatePreview() {
   stopCamera();
   switchView('preview');
-  
+
   const ctx = previewEls.canvas.getContext('2d');
-  
+
   // Frame layout configuration
   const padding = 40;
   const spacing = 20;
   // Use a standard aspect ratio for individual photos (e.g., 4:3)
   const photoWidth = 800;
   const photoHeight = 600;
-  
+
   const totalPhotos = state.config.photoCount;
-  
+
   // Calculate canvas dimensions
   const totalWidth = photoWidth + (padding * 2);
   const totalHeight = (photoHeight * totalPhotos) + (spacing * (totalPhotos - 1)) + (padding * 3); // Extra padding at bottom
-  
+
   previewEls.canvas.width = totalWidth;
   previewEls.canvas.height = totalHeight;
-  
+
   // Draw background frame
   drawThemeBackground(ctx, totalWidth, totalHeight, state.config.theme, state.config.frameColor);
-  
+
   // Load and draw all photos
   let loadedCount = 0;
-  
+
   state.capturedPhotos.forEach((dataUrl, index) => {
     const img = new Image();
     img.onload = () => {
       const y = padding + (index * (photoHeight + spacing));
       ctx.drawImage(img, padding, y, photoWidth, photoHeight);
-      
+
       // Draw subtle inner shadow/border for realism
       ctx.strokeStyle = 'rgba(0,0,0,0.1)';
       ctx.lineWidth = 2;
       ctx.strokeRect(padding, y, photoWidth, photoHeight);
-      
+
       loadedCount++;
       if (loadedCount === totalPhotos) {
         // Draw theme overlay (stickers/characters)
@@ -270,16 +270,16 @@ function generatePreview() {
         // Add branding/text at the bottom
         let isDark = false;
         if (state.config.theme === 'cyberpunk' || state.config.theme === 'party') {
-            isDark = true;
+          isDark = true;
         } else if (state.config.theme === 'minimalist') {
-            const hex = state.config.frameColor.replace('#', '');
-            const r = parseInt(hex.substr(0, 2), 16);
-            const g = parseInt(hex.substr(2, 2), 16);
-            const b = parseInt(hex.substr(4, 2), 16);
-            const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-            isDark = yiq < 128;
+          const hex = state.config.frameColor.replace('#', '');
+          const r = parseInt(hex.substr(0, 2), 16);
+          const g = parseInt(hex.substr(2, 2), 16);
+          const b = parseInt(hex.substr(4, 2), 16);
+          const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+          isDark = yiq < 128;
         }
-        
+
         ctx.fillStyle = isDark ? '#ffffff' : '#1a1a1a';
         ctx.font = 'bold 45px "Outfit", sans-serif';
         ctx.textAlign = 'center';
@@ -318,7 +318,7 @@ function uploadToDrive() {
     alert("Google Identity Services failed to load. Check your connection.");
     return;
   }
-  tokenClient.requestAccessToken({prompt: ''});
+  tokenClient.requestAccessToken({ prompt: '' });
 }
 
 function executeDriveUpload(accessToken) {
@@ -342,21 +342,21 @@ function executeDriveUpload(accessToken) {
       },
       body: form
     })
-    .then(response => {
-      if (response.ok) return response.json();
-      throw new Error('Upload failed');
-    })
-    .then(data => {
-      alert("Successfully saved to Google Drive!");
-    })
-    .catch(error => {
-      console.error("Drive upload error:", error);
-      alert("Failed to upload to Google Drive.");
-    })
-    .finally(() => {
-      previewEls.driveBtn.textContent = 'Save to Drive';
-      previewEls.driveBtn.disabled = false;
-    });
+      .then(response => {
+        if (response.ok) return response.json();
+        throw new Error('Upload failed');
+      })
+      .then(data => {
+        alert("Successfully saved to Google Drive!");
+      })
+      .catch(error => {
+        console.error("Drive upload error:", error);
+        alert("Failed to upload to Google Drive.");
+      })
+      .finally(() => {
+        previewEls.driveBtn.textContent = 'Save to Drive';
+        previewEls.driveBtn.disabled = false;
+      });
   }, 'image/png');
 }
 
