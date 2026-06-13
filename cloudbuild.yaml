@@ -1,15 +1,5 @@
 steps:
-  # Step 1: Install Node.js dependencies
-  - name: 'node:18'
-    entrypoint: 'npm'
-    args: ['install']
-
-  # Step 2: Build the Vite static site
-  - name: 'node:18'
-    entrypoint: 'npm'
-    args: ['run', 'build']
-
-  # Step 3: Build the Docker image with Nginx
+  # Step 1: Build the Docker image with Nginx (This also builds the Vite app)
   - name: 'gcr.io/cloud-builders/docker'
     args: ['build', '-t', 'gcr.io/$PROJECT_ID/vibebooth:latest', '.']
 
