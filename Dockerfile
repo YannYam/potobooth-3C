@@ -2,8 +2,9 @@
 FROM node:18-alpine as build-stage
 WORKDIR /app
 COPY package*.json ./
-RUN npm install
 COPY . .
+# Remove any host node_modules that might have been copied, then install fresh
+RUN rm -rf node_modules && npm install
 RUN npm run build
 
 # Production stage
