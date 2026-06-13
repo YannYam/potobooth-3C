@@ -35,3 +35,6 @@ steps:
 
 images:
   - 'gcr.io/$PROJECT_ID/vibebooth:latest'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
