@@ -30,8 +30,7 @@ const previewEls = {
   canvas: document.getElementById('output-canvas'),
   downloadBtn: document.getElementById('download-btn'),
   driveBtn: document.getElementById('drive-btn'),
-  retakeBtn: document.getElementById('retake-btn'),
-  individualPhotosContainer: document.getElementById('individual-photos-container')
+  retakeBtn: document.getElementById('retake-btn')
 };
 
 // Google Drive Config
@@ -329,7 +328,7 @@ function generatePreview() {
           const logoY = lastPhotoBottomY + ((brandingTopY - lastPhotoBottomY - logoSize) / 2);
           ctx.drawImage(logo, logoX, logoY, logoSize, logoSize);
           
-          renderIndividualThumbnails();
+          renderRetakeButtons(totalHeight, padding, spacing, photoHeight, totalPhotos);
         };
         logo.src = logoSrc;
       }
@@ -338,57 +337,53 @@ function generatePreview() {
   });
 }
 
-function renderIndividualThumbnails() {
-  if (!previewEls.individualPhotosContainer) return;
-  previewEls.individualPhotosContainer.innerHTML = '';
-  state.capturedPhotos.forEach((dataUrl, index) => {
-    const item = document.createElement('div');
-    item.style.position = 'relative';
-    item.style.borderRadius = '8px';
-    item.style.overflow = 'hidden';
-    item.style.aspectRatio = '4/3';
-    item.style.boxShadow = '0 2px 5px rgba(0,0,0,0.3)';
-    
-    const img = document.createElement('img');
-    img.src = dataUrl;
-    img.style.width = '100%';
-    img.style.height = '100%';
-    img.style.objectFit = 'cover';
-    img.style.display = 'block';
+function renderRetakeButtons(totalHeight, padding, spacing, photoHeight, totalPhotos) {
+  const container = document.getElementById('retake-buttons-container');
+  if (!container) return;
+  container.innerHTML = '';
+  
+  for (let i = 0; i < totalPhotos; i++) {
+    const y_px = padding + (i * (photoHeight + spacing));
+    // Calculate percentage from top to center of this photo
+    const topPct = ((y_px + photoHeight / 2) / totalHeight) * 100;
     
     const btn = document.createElement('button');
     btn.className = 'primary-btn';
+    btn.innerHTML = '↻ Retake';
     btn.style.position = 'absolute';
-    btn.style.bottom = '8px';
+    btn.style.top = `${topPct}%`;
     btn.style.left = '50%';
-    btn.style.transform = 'translateX(-50%)';
-    btn.style.padding = '0.3rem 0.6rem';
-    btn.style.fontSize = '0.8rem';
-    btn.style.width = 'auto';
-    btn.style.background = 'rgba(0,0,0,0.6)';
+    btn.style.transform = 'translate(-50%, -50%)';
+    btn.style.padding = '0.8rem 1.5rem';
+    btn.style.fontSize = '1.1rem';
+    btn.style.background = 'rgba(0,0,0,0.5)';
     btn.style.color = '#fff';
-    btn.style.border = '1px solid rgba(255,255,255,0.3)';
+    btn.style.border = '2px solid rgba(255,255,255,0.6)';
+    btn.style.borderRadius = '30px';
     btn.style.backdropFilter = 'blur(4px)';
     btn.style.cursor = 'pointer';
-    btn.textContent = `Retake`;
+    btn.style.pointerEvents = 'auto'; // Re-enable pointer events for the button
+    btn.style.opacity = '0.7';
+    btn.style.transition = 'all 0.2s ease-in-out';
     
-    // Add hover effect for the button
     btn.onmouseover = () => {
-      btn.style.background = 'rgba(255,255,255,0.2)';
+      btn.style.opacity = '1';
+      btn.style.background = 'rgba(0,0,0,0.8)';
+      btn.style.transform = 'translate(-50%, -50%) scale(1.05)';
     };
     btn.onmouseout = () => {
-      btn.style.background = 'rgba(0,0,0,0.6)';
+      btn.style.opacity = '0.7';
+      btn.style.background = 'rgba(0,0,0,0.5)';
+      btn.style.transform = 'translate(-50%, -50%) scale(1)';
     };
 
     btn.onclick = () => {
-      state.retakingIndex = index;
+      state.retakingIndex = i;
       startCamera();
     };
     
-    item.appendChild(img);
-    item.appendChild(btn);
-    previewEls.individualPhotosContainer.appendChild(item);
-  });
+    container.appendChild(btn);
+  }
 }
 
 function downloadStrip() {
