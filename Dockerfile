@@ -9,9 +9,12 @@ RUN npm run build
 
 # Production stage
 FROM nginx:alpine as production-stage
+# Replace the ENTIRE main nginx config (not just the server block)
+# This ensures only port 8080 is active — required for Cloud Run
+COPY nginx.conf /etc/nginx/nginx.conf
 # Copy the built Vite assets to Nginx's serve directory
 COPY --from=build-stage /app/dist /usr/share/nginx/html
-# Expose port 80
-EXPOSE 80
+# Cloud Run requires port 8080
+EXPOSE 8080
 # Start Nginx
 CMD ["nginx", "-g", "daemon off;"]

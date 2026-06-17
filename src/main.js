@@ -1,4 +1,5 @@
 import './style.css';
+import logoSrc from './img/3C_optimized.png';
 
 // DOM Elements
 const views = {
@@ -11,7 +12,10 @@ const setupEls = {
   photoCount: document.getElementById('photo-count'),
   frameTheme: document.getElementById('frame-theme'),
   frameColor: document.getElementById('frame-color'),
-  startBtn: document.getElementById('start-btn')
+  themePreviewCanvas: document.getElementById('theme-preview-canvas'),
+  startBtn: document.getElementById('start-btn'),
+  customFrameUploadGroup: document.getElementById('custom-frame-upload-group'),
+  customFrameUpload: document.getElementById('custom-frame-upload')
 };
 
 const cameraEls = {
@@ -26,12 +30,13 @@ const previewEls = {
   canvas: document.getElementById('output-canvas'),
   downloadBtn: document.getElementById('download-btn'),
   driveBtn: document.getElementById('drive-btn'),
-  retakeBtn: document.getElementById('retake-btn')
+  retakeBtn: document.getElementById('retake-btn'),
+  individualPhotosContainer: document.getElementById('individual-photos-container')
 };
 
 // Google Drive Config
 // NOTE: To make this fully functional, replace this with a valid Client ID from Google Cloud Console
-const GOOGLE_CLIENT_ID = '117288252249205185149.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = '114993439314356360088.apps.googleusercontent.com';
 let tokenClient;
 
 window.onload = () => {
@@ -55,9 +60,11 @@ const state = {
   config: {
     photoCount: 4,
     theme: 'minimalist',
-    frameColor: '#ffffff'
+    frameColor: '#ffffff',
+    customImage: null
   },
-  currentPhoto: 0
+  currentPhoto: 0,
+  retakingIndex: null
 };
 
 // Functions
@@ -97,11 +104,13 @@ function drawThemeBackground(ctx, width, height, theme, baseColor) {
   }
 }
 
-function drawThemeOverlay(ctx, width, height, theme) {
+function drawThemeOverlay(ctx, width, height, theme, customImage = null) {
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
 
-  if (theme === 'cyberpunk') {
+  if (theme === 'custom' && customImage) {
+    ctx.drawImage(customImage, 0, 0, width, height);
+  } else if (theme === 'cyberpunk') {
     ctx.font = '60px Arial';
     ctx.fillText('👾', width - 60, 60);
     ctx.fillText('⚡', 60, height - 150);
@@ -143,7 +152,11 @@ async function startCamera() {
     // Slight delay to ensure video is ready
     setTimeout(() => {
       cameraEls.captureBtn.classList.remove('hidden');
-      updateProgress();
+      if (state.retakingIndex === null) {
+        updateProgress();
+      } else {
+        cameraEls.progress.textContent = `Retaking Photo #${state.retakingIndex + 1}`;
+      }
     }, 1000);
   } catch (err) {
     console.error("Error accessing camera: ", err);
@@ -164,15 +177,22 @@ function updateProgress() {
 
 async function startCaptureSequence() {
   cameraEls.captureBtn.classList.add('hidden');
-  state.capturedPhotos = [];
-  state.currentPhoto = 0;
-  updateProgress();
-
-  for (let i = 0; i < state.config.photoCount; i++) {
+  
+  if (state.retakingIndex !== null) {
     await takePhotoWithCountdown();
-  }
+    state.retakingIndex = null;
+    generatePreview();
+  } else {
+    state.capturedPhotos = [];
+    state.currentPhoto = 0;
+    updateProgress();
 
-  generatePreview();
+    for (let i = 0; i < state.config.photoCount; i++) {
+      await takePhotoWithCountdown();
+    }
+
+    generatePreview();
+  }
 }
 
 function takePhotoWithCountdown() {
@@ -199,8 +219,10 @@ function takePhotoWithCountdown() {
         }, 300);
 
         captureFrame();
-        state.currentPhoto++;
-        updateProgress();
+        if (state.retakingIndex === null) {
+          state.currentPhoto++;
+          updateProgress();
+        }
 
         // Wait a bit before next countdown
         setTimeout(resolve, 1000);
@@ -220,7 +242,11 @@ function captureFrame() {
   ctx.scale(-1, 1);
   ctx.drawImage(cameraEls.video, 0, 0, canvas.width, canvas.height);
 
-  state.capturedPhotos.push(canvas.toDataURL('image/png'));
+  if (state.retakingIndex !== null) {
+    state.capturedPhotos[state.retakingIndex] = canvas.toDataURL('image/png');
+  } else {
+    state.capturedPhotos.push(canvas.toDataURL('image/png'));
+  }
 }
 
 function generatePreview() {
@@ -240,7 +266,8 @@ function generatePreview() {
 
   // Calculate canvas dimensions
   const totalWidth = photoWidth + (padding * 2);
-  const totalHeight = (photoHeight * totalPhotos) + (spacing * (totalPhotos - 1)) + (padding * 3); // Extra padding at bottom
+  const logoAreaHeight = 80; // space for the 3C logo
+  const totalHeight = (photoHeight * totalPhotos) + (spacing * (totalPhotos - 1)) + (padding * 3) + logoAreaHeight; // Extra padding at bottom + logo
 
   previewEls.canvas.width = totalWidth;
   previewEls.canvas.height = totalHeight;
@@ -265,7 +292,7 @@ function generatePreview() {
       loadedCount++;
       if (loadedCount === totalPhotos) {
         // Draw theme overlay (stickers/characters)
-        drawThemeOverlay(ctx, totalWidth, totalHeight, state.config.theme);
+        drawThemeOverlay(ctx, totalWidth, totalHeight, state.config.theme, state.config.customImage);
 
         // Add branding/text at the bottom
         let isDark = false;
@@ -284,15 +311,83 @@ function generatePreview() {
         ctx.font = 'bold 45px "Outfit", sans-serif';
         ctx.textAlign = 'center';
         ctx.letterSpacing = '5px'; // HTML5 Canvas letterSpacing support
-        ctx.fillText('V I B E B O O T H', totalWidth / 2, totalHeight - padding * 1.2);
+        ctx.fillText('EXPO - UKM 3C', totalWidth / 2, totalHeight - padding * 1.2);
 
         ctx.font = '300 24px "Outfit", sans-serif';
         ctx.fillStyle = isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.5)';
         const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
         ctx.fillText(dateStr, totalWidth / 2, totalHeight - padding / 2.5);
+
+        // Draw 3C.png logo centered between photos and text
+        const logo = new Image();
+        logo.onload = () => {
+          const logoSize = 60;
+          const logoX = (totalWidth - logoSize) / 2;
+          // Place logo between the last photo and the branding text
+          const lastPhotoBottomY = padding + ((totalPhotos - 1) * (photoHeight + spacing)) + photoHeight;
+          const brandingTopY = totalHeight - padding * 1.2 - 45; // approximate top of brand text
+          const logoY = lastPhotoBottomY + ((brandingTopY - lastPhotoBottomY - logoSize) / 2);
+          ctx.drawImage(logo, logoX, logoY, logoSize, logoSize);
+          
+          renderIndividualThumbnails();
+        };
+        logo.src = logoSrc;
       }
     };
     img.src = dataUrl;
+  });
+}
+
+function renderIndividualThumbnails() {
+  if (!previewEls.individualPhotosContainer) return;
+  previewEls.individualPhotosContainer.innerHTML = '';
+  state.capturedPhotos.forEach((dataUrl, index) => {
+    const item = document.createElement('div');
+    item.style.position = 'relative';
+    item.style.borderRadius = '8px';
+    item.style.overflow = 'hidden';
+    item.style.aspectRatio = '4/3';
+    item.style.boxShadow = '0 2px 5px rgba(0,0,0,0.3)';
+    
+    const img = document.createElement('img');
+    img.src = dataUrl;
+    img.style.width = '100%';
+    img.style.height = '100%';
+    img.style.objectFit = 'cover';
+    img.style.display = 'block';
+    
+    const btn = document.createElement('button');
+    btn.className = 'primary-btn';
+    btn.style.position = 'absolute';
+    btn.style.bottom = '8px';
+    btn.style.left = '50%';
+    btn.style.transform = 'translateX(-50%)';
+    btn.style.padding = '0.3rem 0.6rem';
+    btn.style.fontSize = '0.8rem';
+    btn.style.width = 'auto';
+    btn.style.background = 'rgba(0,0,0,0.6)';
+    btn.style.color = '#fff';
+    btn.style.border = '1px solid rgba(255,255,255,0.3)';
+    btn.style.backdropFilter = 'blur(4px)';
+    btn.style.cursor = 'pointer';
+    btn.textContent = `Retake`;
+    
+    // Add hover effect for the button
+    btn.onmouseover = () => {
+      btn.style.background = 'rgba(255,255,255,0.2)';
+    };
+    btn.onmouseout = () => {
+      btn.style.background = 'rgba(0,0,0,0.6)';
+    };
+
+    btn.onclick = () => {
+      state.retakingIndex = index;
+      startCamera();
+    };
+    
+    item.appendChild(img);
+    item.appendChild(btn);
+    previewEls.individualPhotosContainer.appendChild(item);
   });
 }
 
@@ -367,6 +462,108 @@ setupEls.startBtn.addEventListener('click', () => {
   state.config.frameColor = setupEls.frameColor.value;
   startCamera();
 });
+
+function updateThemePreview() {
+  const canvas = setupEls.themePreviewCanvas;
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  // Set dimensions for the preview canvas
+  canvas.width = 400;
+  canvas.height = 600;
+
+  const theme = setupEls.frameTheme.value;
+  const baseColor = setupEls.frameColor.value;
+
+  // Draw background
+  drawThemeBackground(ctx, canvas.width, canvas.height, theme, baseColor);
+
+  // Draw mock photo placeholders
+  ctx.fillStyle = 'rgba(200, 200, 200, 0.6)';
+  ctx.fillRect(40, 40, 320, 220); // Photo 1 placeholder
+  ctx.fillRect(40, 280, 320, 220); // Photo 2 placeholder
+
+  // Draw theme elements/stickers scaled down for preview
+  drawThemeOverlay(ctx, canvas.width, canvas.height, theme, state.config.customImage);
+
+  // Add text
+  let isDark = false;
+  if (theme === 'cyberpunk' || theme === 'party') {
+    isDark = true;
+  } else if (theme === 'minimalist') {
+    const hex = baseColor.replace('#', '');
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+    isDark = yiq < 128;
+  }
+
+  ctx.fillStyle = isDark ? '#ffffff' : '#1a1a1a';
+  ctx.font = 'bold 24px "Outfit", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.letterSpacing = '3px';
+  ctx.fillText('EXPO - UKM 3C', canvas.width / 2, canvas.height - 40);
+
+  // Draw 3C.png logo scaled down for preview
+  const logo = new Image();
+  logo.onload = () => {
+    const logoSize = 30; // scaled down size for preview
+    const logoX = (canvas.width - logoSize) / 2;
+    // Place logo roughly in the gap between the bottom photo placeholder and text
+    const logoY = canvas.height - 85; 
+    ctx.drawImage(logo, logoX, logoY, logoSize, logoSize);
+  };
+  logo.src = logoSrc;
+}
+
+setupEls.frameTheme.addEventListener('change', () => {
+  if (setupEls.frameTheme.value === 'custom') {
+    setupEls.customFrameUploadGroup.style.display = 'block';
+  } else {
+    setupEls.customFrameUploadGroup.style.display = 'none';
+  }
+  updateThemePreview();
+});
+
+setupEls.customFrameUpload.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        state.config.customImage = img;
+        updateThemePreview();
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  } else {
+    state.config.customImage = null;
+    updateThemePreview();
+  }
+});
+setupEls.frameColor.addEventListener('input', () => {
+  // When using the custom color picker, mark the custom swatch as active
+  document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+  document.querySelector('.swatch-custom').classList.add('active');
+  updateThemePreview();
+});
+
+// Swatch click handlers
+document.querySelectorAll('.swatch:not(.swatch-custom)').forEach(swatch => {
+  swatch.addEventListener('click', () => {
+    const color = swatch.dataset.color;
+    setupEls.frameColor.value = color;
+    document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+    swatch.classList.add('active');
+    updateThemePreview();
+  });
+});
+
+// Initialize preview on page load
+updateThemePreview();
 
 cameraEls.captureBtn.addEventListener('click', startCaptureSequence);
 
